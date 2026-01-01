@@ -1,0 +1,236 @@
+direction: right
+
+title: UML Editor Web - System Architecture {
+  near: top-center
+  shape: text
+  style: {
+    font-size: 24
+    bold: true
+  }
+}
+
+# Client Layer
+client: Client Layer {
+  browser: Web Browser {
+    shape: rectangle
+    icon: https://icons.terrastruct.com/essentials/112-browser.svg
+  }
+  
+  react: React SPA {
+    shape: rectangle
+    style.fill: "#61DAFB"
+    
+    ui: UI Components {
+      mui: Material UI v5
+      router: React Router v6
+      theme: Light/Dark Theme
+    }
+    
+    state: State Management {
+      context: Auth Context
+      hooks: React Hooks
+      storage: LocalStorage
+    }
+    
+    api: API Layer {
+      axios: Axios Client
+      services: Diagram Service
+      types: TypeScript Types
+    }
+  }
+  
+  browser -> react: Renders
+}
+
+# AWS Cloud
+aws: AWS Cloud (us-east-1) {
+  style.fill: "#FF9900"
+  style.stroke: "#232F3E"
+  
+  # API Gateway
+  apiGw: API Gateway {
+    shape: rectangle
+    icon: https://icons.terrastruct.com/aws/Networking%20&%20Content%20Delivery/Amazon-API-Gateway.svg
+    
+    endpoint: REST API
+    url: ipq2q6g9pd.execute-api
+    cors: CORS Enabled
+  }
+  
+  # Lambda Functions
+  lambda: Lambda Functions {
+    shape: rectangle
+    icon: https://icons.terrastruct.com/aws/Compute/AWS-Lambda.svg
+    style.fill: "#FF9900"
+    
+    create: createDiagram {
+      runtime: Node.js/Python
+      action: Render D2 → SVG
+    }
+    
+    get: getDiagrams {
+      runtime: Node.js/Python
+      action: List user diagrams
+    }
+    
+    getById: getDiagramById {
+      runtime: Node.js/Python
+      action: Fetch diagram + SVG
+    }
+    
+    delete: deleteDiagram {
+      runtime: Node.js/Python
+      action: Remove from S3 & DB
+    }
+  }
+  
+  # S3 Storage
+  s3: Amazon S3 {
+    shape: cylinder
+    icon: https://icons.terrastruct.com/aws/Storage/Amazon-Simple-Storage-Service-S3.svg
+    style.fill: "#569A31"
+    
+    bucket: diagrams-234166032026
+    structure: users/{userId}/{diagramId}.svg
+    access: Pre-signed URLs (1hr)
+  }
+  
+  # DynamoDB
+  dynamodb: DynamoDB {
+    shape: cylinder
+    icon: https://icons.terrastruct.com/aws/Database/Amazon-DynamoDB.svg
+    style.fill: "#527FFF"
+    
+    table: diagrams-table
+    pk: diagramId (Partition Key)
+    gsi: userId (GSI)
+    attrs: |md
+      • diagramType
+      • d2Text
+      • createdAt
+      • s3Key
+    |
+  }
+  
+  # Cognito
+  cognito: AWS Cognito {
+    shape: rectangle
+    icon: https://icons.terrastruct.com/aws/Security%20Identity%20&%20Compliance/Amazon-Cognito.svg
+    style.fill: "#DD344C"
+    
+    pool: User Pool
+    poolId: us-east-1_lQxhLIwx3
+    client: Client ID: 6t4l4amnm1c9...
+    sso: Google OAuth 2.0
+    tokens: JWT (ID + Access)
+  }
+  
+  # Connections within AWS
+  apiGw -> lambda: Proxy Integration
+  lambda.create -> s3: Upload SVG
+  lambda.create -> dynamodb: Save Metadata
+  lambda.get -> dynamodb: Query by userId
+  lambda.getById -> dynamodb: Get Metadata
+  lambda.getById -> s3: Fetch SVG
+  lambda.delete -> s3: Delete Object
+  lambda.delete -> dynamodb: Delete Item
+}
+
+# External Services
+google: Google Identity {
+  shape: rectangle
+  icon: https://icons.terrastruct.com/social/013-google.svg
+  style.fill: "#4285F4"
+  
+  oauth: OAuth 2.0 Provider
+  scopes: openid, profile, email
+}
+
+# Main Connections
+client.react.api -> aws.apiGw: HTTPS REST API {
+  style.stroke: "#2E7D32"
+  style.stroke-width: 3
+}
+
+aws.apiGw -> client.react: JSON Response {
+  style.stroke: "#1976D2"
+  style.stroke-width: 3
+}
+
+client.browser -> aws.cognito: Login/OAuth Flow {
+  style.stroke: "#D32F2F"
+  style.stroke-width: 2
+}
+
+aws.cognito -> client.browser: JWT Tokens {
+  style.stroke: "#7B1FA2"
+  style.stroke-width: 2
+}
+
+aws.cognito -> google: Federated Identity {
+  style.stroke-dash: 3
+}
+
+google -> aws.cognito: User Profile {
+  style.stroke-dash: 3
+}
+
+# Authentication Flow Annotation
+authFlow: Authentication Flow {
+  near: client
+  shape: text
+  style: {
+    font-size: 12
+    italic: true
+  }
+  
+  flow: |md
+    1. User visits app
+    2. No token → Redirect to Cognito
+    3. Cognito → Google OAuth
+    4. Return with JWT tokens
+    5. Store in localStorage
+    6. API calls include Bearer token
+  |
+}
+
+# API Flow Annotation
+apiFlow: API Request Flow {
+  near: aws
+  shape: text
+  style: {
+    font-size: 12
+    italic: true
+  }
+  
+  flow: |md
+    POST /diagrams
+    → Lambda validates JWT
+    → D2 CLI renders SVG
+    → Upload to S3
+    → Save to DynamoDB
+    → Return svgContent + s3Url
+  |
+}
+
+# Technology Stack Legend
+techStack: Technology Stack {
+  near: bottom-center
+  shape: rectangle
+  style.fill: "#F5F5F5"
+  
+  frontend: Frontend {
+    react: React 18.2
+    ts: TypeScript 5.3
+    vite: Vite 5.1
+    mui: Material UI 5.15
+    axios: Axios 1.6.7
+  }
+  
+  backend: Backend {
+    gateway: API Gateway REST
+    compute: Lambda (Node.js/Python)
+    storage: S3 + DynamoDB
+    auth: Cognito + Google SSO
+  }
+}
